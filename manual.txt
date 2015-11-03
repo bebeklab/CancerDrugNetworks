@@ -1,0 +1,74 @@
+Instruction Manual for CADRE:
+
+Input Files format
+•	Drug names included in input files can’t have spaces, dashes, etc, only letters, numbers, and underscores can be used
+•	Input file names have the same restrictions as drug names 
+•	There can be no extra lines at the ends of input files
+•	It is recommended (and required if combining databases) to indicate the database from which each drug comes using the format drug_database in the input files
+•	RNA files need to be RMA normalized and there should be no repeating gene names (we averaged together the scores for repeated genes, the file is included if you would like to use our script to do so)
+•	CNV files need to be normalized using the equation logbase2(copynumber/2), the code is also included if you’d like to use it
+•	RNA and CNV files both need to have the following format: 
+- The first row must be the list of Cell Lines, the first cell of the first row must be titled Cell_Line, the cell lines must be in alphabetical order
+- Each of the subsequent rows should contain the gene in the first cell followed by that gene’s score for each cell line in the column of that cell line
+
+•	IC-50 files need to have the following format
+-The first column needs to be the list of all cell lines for which you have IC-50 data, it must be titled Cell_Line in the first cell, the cell lines must be in alphabetical order
+-The subsequent columns should be titled using the drug names for which you have IC-50 data for, the column should contain the IC-50 data for each cell line for the drug that they it is titled, the IC-50 data for the cell line should be in the same row as that cell line, if there isn’t an IC-50 value for that particular drug for that particular cell line, fill the cell with N/A
+-The IC-50 values in the input file should be in micromoles! They should not be the natural log!!! 
+
+Running the code
+•	Flags
+-rna : (necessary) takes the RNA file names that you want to run, you can input as many as you like, only accepts tab delimited (.txt) files 
+-cnv : (necessary) takes the CNV file names that you want to run, you can input as many as you like, only accepts tab delimited (.txt) files
+-ic50 : (necessary) takes the ic50 file names that you want to run, you can input as many as you like, only accepts tab delimited (.txt) files
+-jar : (necessary) takes the absolute file path to the downloaded gsea jar file, only one input is allowed
+-kegg : (necessary) takes the absolute file path to the downloaded KEGG file, only one input is allowed
+-chip : (necessary) takes the absolute file path to the downloaded Gene chip file, only one input is allowed
+-output : (optional) takes the full path to the folder to save the gsea results in, the default is the current working directory (note that the rest of the code can’t retrieve the gsea folders unless they are saved to the current working directory)
+-pathwaycutoff : (optional) enables you to indicate whether the pathway threshold of three should be applied to your pathway CADRE, accepts one of two arguments ‘TRUE’ or ‘FALSE’, ‘TRUE’ is the default and the threshold will be applied
+-feature cutoff : (optional) enables you to indicate whether the feature threshold of two standard deviations above the average should be applied to your feature CADRE, accepts one of two arguments ‘TRUE’ or ‘FALSE’, ‘TRUE’ is the default and the threshold will be applied
+
+Example of running the code in python:
+FlagsAddedModifiedCreateCADREs.py –rna "RNA_file1",“RNA_file2” -cnv "CNV_file1",“CNV_file2” -ic50 "IC50_file1",“IC50_file2” -jar “absolutepath.jar" -kegg "absolutepath.gmt" –chip “absolutepath.chip" -pathwaycutoff "FALSE" 
+- Note that matching RNA, CNV and IC-50 files need to be listed in the same order following their respective flags, otherwise gsea will attempt to run the IC-50 data A with RNA data B etc…
+- Also, if you put in multiple RNA, CNV and IC-50 files, the code automatically combines the results into a single pathway CADRE and a single feature CADRE, if you want the results of these files to be kept separate you must run them separately (ie one RNA, CNV, and IC-50 file per code run)
+
+Our Parameters
+•	GSEA parameters : we used the default GSEA parameters in our analysis except for those listed below
+- “permutation type” was set as gene set
+- “min gene set size” was set as 5
+- “max gene set size” was set as 1500
+- “collapse data set to gene symbol” was set to false
+- “omit features with no symbol match” was set to false
+- “metric” was set to tTest
+- “number of permutations” was set to 2000
+- for “gene sets database” we used version 5 of the KEGG database (c2.cp.kegg.v5.0.symbols) 
+- for “Chip platform” we used GENE_SYMBOL
+
+•	Analysis parameters 
+-	Both pathway and feature thresholds were applied to Breast, Ovarian, and BROVEN CADREs
+-	Neither pathway or feature thresholds were applied to Endometrial CADREs
+-	We used the MCODE app in cytoscape 3.2.1 to identify the subnetworks, we used it’s default parameters (didn’t include loops, degree cutoff = 2, used the haircut, node density cutoff = 0.1, node score cutoff = 0.2, K-core = 2, and Max. depth = 100)
+
+Code output
+•	The code produces a large number of files
+•	 Many are necessary for GSEA to run (all IC50 .cls files and the RNA and CNV .txt files for each drug) or are automatically produced by GSEA  (the RNA and CNV folders for each drug)
+•	Others are for the user’s benefit (the list of drugs run through GSEA, 
+- The files titled RNAfilename_filtered.txt, CNVfilename_filtered.txt, or IC50filename_filtered.txt contain only the cell lines present in all three sets of data 
+- The excel document titled IC50filename_FILTERED_AND_CLASSIFIED contains a sheet for each drug and the affiliated cell lines classified as either sensitive (S) or resistant (R)
+- The excel document titled IC50filename_Drugs_Run_Through_Gsea contains a list of the drugs that had enough variation in their sensitivity classification to be run through GSEA
+- The .txt files titled gsea_folder_names_RNAfilename and gsea_folder_names_CNVfilename contain the names of the gsea output folders for that run 
+- The .txt file titled either RNAfilename_pathways_results or combined_RNAfilename1_RNAfilename2_pathways_results (depending on whether or not databases are being combined) is a spreadsheet that contains the up and down regulated pathways affiliated with each drug, the .txt file titled the same as above but with the appendage _network is an unfiltered list of drug pairs and the weight of the edges that they share,  the .txt file titled the same as above but with the appendage _index is a list of drug pairs and the pathways that they have in common 
+- The .txt file titled either RNAfilename_gene_results or combined_RNAfilename1_RNAfilename2_gene_results (depending on whether or not databases are being combined) is a spreadsheet that contains the up and down differentially expressed genes affiliated with each drug, the .txt file titled the same as above but with the appendage _network is an unfiltered list of drug pairs and the weight of the edges that they share,  the .txt file titled the same as above but with the appendage _index is a list of drug pairs and the genes that they have in common 
+- The .txt file titled either CNVfilename_gene_results or combined_CNVfilename1_CNVfilename2_gene_results (depending on whether or not databases are being combined) is a spreadsheet that contains the up and down differential copy number genes affiliated with each drug, the .txt file titled the same as above but with the appendage _network is an unfiltered list of drug pairs and the weight of the edges that they share,  the .txt file titled the same as above but with the appendage _index is a list of drug pairs and the genes that they have in common 
+
+•	The main output files are the cytoscape files
+-	They are .txt files
+-	They are titled based on the names of the user input files, but they start with the word cytoscape
+-	There are two generated per run, one with pathway results and one with feature results 
+-	They can be input directly into cytoscape in order to visualize the CADREs
+-	Drug pairs whose edge weight is zero have been removed from them, regardless of whether or not the user chooses to apply the thresholds 
+-	They contain the list of drug pairs and the edge weight between pairs (column1 is drug1, column2 is weight, column3 is drug2)
+-	The feature CADRE combines the RNA gene results network and the CNV gene results network into a single network by adding the edgeweights of the two networks together 
+
+
